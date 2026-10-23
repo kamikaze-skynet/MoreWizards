@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Uses the Cpp2IL libraries that ship with BepInEx IL2CPP. Point BepInExDir at your install. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>literals</AssemblyName>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <RollForward>Major</RollForward>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\The Spell Brigade</GameDir>
+    <BepInExDir Condition="'$(BepInExDir)' == ''">$(GameDir)\BepInEx</BepInExDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(BepInExDir)\core\*.dll"
+               Exclude="$(BepInExDir)\core\BepInEx.*.dll;$(BepInExDir)\core\Il2CppInterop.Runtime.dll;$(BepInExDir)\core\Il2CppInterop.HarmonySupport.dll;$(BepInExDir)\core\Gee.External.Capstone.dll" />
+  </ItemGroup>
+</Project>
