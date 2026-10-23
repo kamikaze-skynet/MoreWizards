@@ -12,7 +12,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.MoreWizards";
     public const string Name = "MoreWizards";
-    public const string Version = "1.5.2";
+    public const string Version = "1.5.3";
 
     internal static new ManualLogSource Log;
 
@@ -54,6 +54,9 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<int> ExtraBossCount;
     internal static ConfigEntry<float>[] ExtraBossChances;
     internal static ConfigEntry<float> ExtraBossSpacing;
+    internal static ConfigEntry<bool> OverheadHealthBars;
+    internal static ConfigEntry<bool> OverheadBarsForSingleBoss;
+    internal static ConfigEntry<float> OverheadBarExtraHeight;
 
     // Shop
     internal static ConfigEntry<float> ShopTimeLimitSeconds;
@@ -142,6 +145,12 @@ public class Plugin : BasePlugin
         }
         ExtraBossSpacing = Config.Bind("Extra Bosses", "Spacing", 9f,
             "How far apart the bosses spawn (extra bosses alternate left and right of the normal one).");
+        OverheadHealthBars = Config.Bind("Extra Bosses", "OverheadHealthBars", true,
+            "Show a health bar over each boss's head when there's more than one boss.");
+        OverheadBarsForSingleBoss = Config.Bind("Extra Bosses", "OverheadBarsForSingleBoss", false,
+            "Also show the overhead bar when there's only one boss.");
+        OverheadBarExtraHeight = Config.Bind("Extra Bosses", "OverheadBarHeight", 0.5f,
+            "Extra height of the overhead bars above the boss's head (in world units).");
 
         ShopTimeLimitSeconds = Config.Bind("Shop", "TimeLimitSeconds", 30f,
             new ConfigDescription("Seconds everyone gets to pick in a level-up shop before the game picks for them (vanilla 30). The game warns at 10s left. Note: the game can kick players who repeatedly run out of time, so don't set this too low.",
@@ -179,6 +188,7 @@ public class Plugin : BasePlugin
             catch (Exception ex) { Log.LogError($"Failed to apply {type.Name}: {ex}"); }
         }
 
+        AddComponent<BossBars>();
         Log.LogInfo($"{Name} ready.");
     }
 }

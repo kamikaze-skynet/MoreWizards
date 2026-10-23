@@ -14,7 +14,7 @@ Lets The Spell Brigade run lobbies of **more than 4 wizards**: 8 by default, and
 - **Elites:** extra copies of each elite.
 - **Wave events:** extra wizards count as stacks of the game's *Stronger Enemies* curse, which unlocks the extra events and elite waves the developers made for that curse.
 - **Bosses:** attack more often, and bring in groups of the current wave's enemies during the fight.
-- **Extra bosses:** the final boss can arrive with up to 5 copies of itself. The host chooses the minimum number of wizards (as low as 1, for solo), how many extra bosses there can be, and the chance of each one. The health bar moves to the next living boss as each falls, and you only win once every boss is down.
+- **Extra bosses:** the final boss can arrive with up to 5 copies of itself. The host chooses the minimum number of wizards (as low as 1, for solo), how many extra bosses there can be, and the chance of each one. Each boss has its own health bar over its head, the big bar moves to the next living boss as each falls, and you only win once every boss is down.
 - **Revives:** tune how much extra wizards add to the shared revive pool.
 
 **Fixes for 5+ players**
@@ -67,6 +67,9 @@ Edit `BepInEx\config\girthy_mods.MoreWizards.cfg`, or use the config editor in y
 | Extra Bosses | MaxExtraBosses | 1 | How many extra bosses there can be (1–5) |
 | Extra Bosses | Boss2ChancePercent … Boss6ChancePercent | 50, 25, 10, 5, 5 | Chance of each extra boss, rolled separately |
 | Extra Bosses | Spacing | 9 | How far apart the bosses spawn |
+| Extra Bosses | OverheadHealthBars | true | Health bar over each boss's head when there's more than one boss |
+| Extra Bosses | OverheadBarsForSingleBoss | false | Also show it when there's only one boss |
+| Extra Bosses | OverheadBarHeight | 0.5 | Extra height of the overhead bars above the head |
 | Revives | ExtraPlayerReviveShare | 1.0 | Revives each extra wizard adds vs a normal wizard (1 = vanilla, 0 = none) |
 | Revives | BonusRevivesPerExtraPlayer | 0 | Flat revives added (or removed) per extra wizard |
 | Objectives | FixCaptureSpeed | true | 5+ wizards capture at the 4-player speed instead of stalling |

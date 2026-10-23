@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.3
+- Each boss gets its own health bar over its head (with name and %) when there's more than one boss. The big bar at the top stays. Settings: `OverheadHealthBars`, `OverheadBarsForSingleBoss`, `OverheadBarHeight` in [Extra Bosses].
+
 ## 1.5.2
 - Fix: with extra bosses, the boss health bar disappeared when the first boss died. The bar now moves to the next living boss, and the defeat sequence plays only for the last one. This runs on every player's game.
 
