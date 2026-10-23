@@ -1,6 +1,6 @@
 {
   "name": "MoreWizards",
-  "version_number": "1.5.1",
+  "version_number": "1.5.2",
   "website_url": "https://github.com/kamikaze-skynet/MoreWizards",
   "description": "Up to 8 wizards (configurable to 16) in The Spell Brigade. Enemies, elites, revives and objectives scale with party size, plus configurable extra bosses.",
   "dependencies": [

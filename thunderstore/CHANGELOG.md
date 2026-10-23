@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.2
+- Fix: with extra bosses, the boss health bar disappeared when the first boss died. The bar now moves to the next living boss, and the defeat sequence plays only for the last one. This runs on every player's game.
+
 ## 1.5.1
 - Fix: Extra Bosses and host settings sync never turned on. They hooked a RunManager method the game doesn't have, so both failed to load ("Failed to apply ExtraBosses/HostSync" in the log). They now hook RunManager.OnDestroy.
 

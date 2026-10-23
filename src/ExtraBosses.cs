@@ -165,6 +165,74 @@ internal static class ExtraBosses
         catch (Exception ex) { Plugin.Log.LogWarning($"Extra bosses (health bar): {ex.Message}"); }
     }
 
+    // ---------- Boss health bar (every player's game) ----------
+    // The boss health panel subscribes to "health depleted" on the boss it shows; on that boss's death it plays the
+    // defeat sequence and hides. With extra bosses that hides the bar while others still live (and pointing the
+    // objective at another boss doesn't re-attach the panel). So: if another copy of that boss is still alive,
+    // skip the defeat sequence and re-attach the bar to the living one. Runs on every game with the mod.
+
+    [HarmonyPatch(typeof(ObjectiveDetailPanel_BossHealth.__c__DisplayClass18_0), nameof(ObjectiveDetailPanel_BossHealth.__c__DisplayClass18_0.Method_Internal_Void_Boolean_DamageInfo_PDM_0))]
+    [HarmonyPrefix]
+    private static bool PanelBossDied_Prefix(ObjectiveDetailPanel_BossHealth.__c__DisplayClass18_0 __instance)
+    {
+        try
+        {
+            var dead = __instance.healthContainer;
+            var panel = __instance.__4__this;
+            if (dead == null || panel == null) return true;
+
+            var next = OtherLivingBoss(dead);
+            if (next == null) return true; // last boss standing: the normal defeat sequence
+
+            var nextObj = OwnerObject(next);
+            if (nextObj == null) return true;
+            panel.InitializeUIEvents(nextObj);
+            panel.InitializeHealthBar(nextObj);
+            Plugin.Log.LogInfo($"Extra bosses: health bar moved to the next boss ({LivingBossCount(dead)} left).");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.LogWarning($"Extra bosses (panel): {ex.Message}");
+            return true;
+        }
+    }
+
+    private static NetworkObject OwnerObject(Component c)
+    {
+        try { return c.GetComponentInParent<NetworkObject>(); } catch { return null; }
+    }
+
+    private static string BossName(Component c)
+    {
+        var o = OwnerObject(c);
+        try { return o == null ? "" : o.gameObject.name.Replace("(Clone)", "").Trim(); } catch { return ""; }
+    }
+
+    private static bool AliveBoss(EnemyHealthContainer c) =>
+        c is not null && !c.WasCollected && c != null && c.gameObject.activeInHierarchy && !c.IsHealthZero();
+
+    /// <summary>Another living enemy from the same boss prefab as <paramref name="dead"/>, if any.</summary>
+    private static EnemyHealthContainer OtherLivingBoss(EnemyHealthContainer dead)
+    {
+        string name = BossName(dead);
+        if (string.IsNullOrEmpty(name)) return null;
+        var deadObj = OwnerObject(dead);
+        foreach (var c in UnityEngine.Object.FindObjectsOfType<EnemyHealthContainer>())
+            if (AliveBoss(c) && OwnerObject(c) != deadObj && BossName(c) == name) return c;
+        return null;
+    }
+
+    private static int LivingBossCount(EnemyHealthContainer dead)
+    {
+        string name = BossName(dead);
+        var deadObj = OwnerObject(dead);
+        int n = 0;
+        foreach (var c in UnityEngine.Object.FindObjectsOfType<EnemyHealthContainer>())
+            if (AliveBoss(c) && OwnerObject(c) != deadObj && BossName(c) == name) n++;
+        return n;
+    }
+
     // ---------- Track kills; release victory when the last boss is dead ----------
 
     [HarmonyPatch(typeof(RunManager), "Update")]
