@@ -130,7 +130,9 @@ internal static class EnemyExtras
             int count = RollCount(extra * Plugin.BossAddsPerExtraPlayer.Value);
             if (count <= 0) return;
 
-            var spawner = Singleton<EnemySpawner>.Instance;
+            EnemySpawner spawner = null;
+            try { spawner = Singleton<EnemySpawner>.Instance; } catch { }
+            if (spawner == null) spawner = UnityEngine.Object.FindObjectOfType<EnemySpawner>();
             if (spawner == null) return;
             if (!TryPickWaveEnemy(spawner, out EnemyType type)) return;
 

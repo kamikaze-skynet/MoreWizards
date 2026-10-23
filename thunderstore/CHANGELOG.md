@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1
+- More reliable player count: if the game's singleton lookup comes back empty, the mod finds the player manager itself. The log now prints `Player count: N (source)` whenever it changes.
+- Boss adds use the same fallback to find the enemy spawner.
+
 ## 1.4.0
 - New: twin bosses. With more wizards than `ScalingStartsAbove`, the final boss can spawn with a twin, and both must die to win. `[Bosses] TwinBossChancePerExtraPlayer` (default 15% per extra wizard), `TwinBossSpacing`.
 

@@ -26,26 +26,54 @@ internal static class DifficultyPatches
         return cachedCount;
     }
 
+    private static GameplayPlayerManager cachedGpm;
+    private static SessionManager cachedSession;
+    private static float nextGpmFind, nextSessionFind;
+    private static int lastLoggedCount = -1;
+
+    /// <summary>
+    /// The game's own singleton accessor first; if that comes back empty through IL2CPP interop,
+    /// find the object once and cache it.
+    /// </summary>
+    private static T Resolve<T>(Func<T> singleton, ref T cache, ref float nextFind) where T : UnityEngine.Object
+    {
+        try { var s = singleton(); if (s != null) return s; } catch { }
+        if (cache != null && !cache.WasCollected) return cache;
+        if (Time.unscaledTime < nextFind) return null;
+        nextFind = Time.unscaledTime + 1f; // FindObjectOfType is slow: at most once a second
+        try { cache = UnityEngine.Object.FindObjectOfType<T>(); } catch { cache = null; }
+        return cache;
+    }
+
     internal static int QueryPlayerCount()
     {
+        int count = 0;
+        string source = "";
         try
         {
-            var gpm = Singleton<GameplayPlayerManager>.Instance;
-            if (gpm != null)
-            {
-                var ids = gpm.Identities;
-                if (ids != null && ids.Count > 0) return ids.Count;
-            }
+            var gpm = Resolve(() => Singleton<GameplayPlayerManager>.Instance, ref cachedGpm, ref nextGpmFind);
+            var ids = gpm?.Identities;
+            if (ids != null && ids.Count > 0) { count = ids.Count; source = "in-run players"; }
         }
         catch { /* not in a run */ }
 
-        try
+        if (count == 0)
         {
-            var sm = SingletonPersistent<SessionManager>.Instance;
-            if (sm != null) return sm.GetNumberOfPlayers();
+            try
+            {
+                var sm = Resolve(() => SingletonPersistent<SessionManager>.Instance, ref cachedSession, ref nextSessionFind);
+                if (sm != null) { count = sm.GetNumberOfPlayers(); source = "session"; }
+            }
+            catch { }
         }
-        catch { }
-        return 1;
+
+        if (count <= 0) { count = 1; source = "fallback"; }
+        if (count != lastLoggedCount)
+        {
+            lastLoggedCount = count;
+            Plugin.Log.LogInfo($"Player count: {count} ({source}).");
+        }
+        return count;
     }
 
     /// <summary>Wizards above ScalingStartsAbove (0 if scaling is off). Uses the host's settings when synced.</summary>
