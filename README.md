@@ -12,7 +12,7 @@ Every player in the lobby needs the mod on the same version. The mod enforces th
 |---|---|
 | Lobby | Raises the 4-player cap (Steam + EOS lobbies, matchmaking, host approval, "server full"). Extra seats arranged around the table, extra seat cameras, player list entries and colours. An invite counter under the Invite Friends button. |
 | Difficulty | Per wizard above `ScalingStartsAbove` (default 4): more enemy health, damage, spawns and horde size, plus extra elite copies and extra *Stronger Enemies* curse stacks, which unlock the game's own extra wave events and elite waves. |
-| Bosses | Faster attacks, add groups during the fight, and a chance of **twin bosses**. Both must die to win. |
+| Bosses | Faster attacks, add groups during the fight, and **extra bosses**: the host picks the minimum player count (even solo), how many extras (up to 5) and each one's chance. Every boss must die to win. |
 | Revives | Tune how much extra wizards add to the shared revive pool. |
 | Objectives | Fixes capture points stalling with 5+ players (vanilla gives 0× speed), and lets capture/sacrifice zones keep growing past 4. |
 | Multiplayer | Join handshake (same mod version required). The host's settings sync to everyone at run start. Configurable shop time limit. |
@@ -58,7 +58,7 @@ src/
   InviteCounter.cs     "3/8 wizards • 5 invites left" label
   DifficultyPatches.cs enemy health/damage/spawn/cap scaling
   EnemyExtras.cs       extra elites, Stronger Enemies stacks, boss attack speed, boss adds
-  TwinBoss.cs          twin final boss + "both must die" victory gating
+  ExtraBosses.cs       extra final bosses + "all must die" victory gating
   ScalingPatches.cs    revive pool tuning, capture speed fix (non-inlined copy)
   ModHandshake.cs      join handshake via the connection payload's Version string
   HostSync.cs          host -> clients settings sync (Netcode named message) + effective settings layer (S)

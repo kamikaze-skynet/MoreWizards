@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0
+- Twin bosses became **extra bosses** with host controls in a new `[Extra Bosses]` section:
+  - `MinPlayers`: fewest wizards needed (1 allows solo).
+  - `MaxExtraBosses`: up to 5 extra bosses.
+  - `Boss2ChancePercent` to `Boss6ChancePercent`: each extra boss's chance, rolled separately.
+  - `Spacing`: extra bosses alternate left and right of the normal spawn.
+- Every boss must die to win, and the health bar moves to the next living boss.
+- Removed `[Bosses] TwinBossChancePerExtraPlayer` and `TwinBossSpacing` (replaced by the settings above).
+
 ## 1.4.1
 - More reliable player count: if the game's singleton lookup comes back empty, the mod finds the player manager itself. The log now prints `Player count: N (source)` whenever it changes.
 - Boss adds use the same fallback to find the enemy spawner.

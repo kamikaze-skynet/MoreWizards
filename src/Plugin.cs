@@ -12,7 +12,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.MoreWizards";
     public const string Name = "MoreWizards";
-    public const string Version = "1.4.1";
+    public const string Version = "1.5.0";
 
     internal static new ManualLogSource Log;
 
@@ -47,8 +47,13 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<bool> BossAddsEnabled;
     internal static ConfigEntry<float> BossAddsPerExtraPlayer;
     internal static ConfigEntry<float> BossAddsIntervalSeconds;
-    internal static ConfigEntry<float> TwinBossChancePerExtraPlayer;
-    internal static ConfigEntry<float> TwinBossSpacing;
+    // Extra bosses
+    internal const int MaxExtraBossSlots = 5;
+    internal static ConfigEntry<bool> ExtraBossesEnabled;
+    internal static ConfigEntry<int> ExtraBossMinPlayers;
+    internal static ConfigEntry<int> ExtraBossCount;
+    internal static ConfigEntry<float>[] ExtraBossChances;
+    internal static ConfigEntry<float> ExtraBossSpacing;
 
     // Shop
     internal static ConfigEntry<float> ShopTimeLimitSeconds;
@@ -119,11 +124,24 @@ public class Plugin : BasePlugin
         BossAddsIntervalSeconds = Config.Bind("Bosses", "AddsIntervalSeconds", 20f,
             new ConfigDescription("Seconds between add groups during a boss fight.", new AcceptableValueRange<float>(5f, 120f)));
 
-        TwinBossChancePerExtraPlayer = Config.Bind("Bosses", "TwinBossChancePerExtraPlayer", 0.15f,
-            new ConfigDescription("Chance per wizard above the threshold that the final boss arrives with a twin. 0.15 = 15% with 5 wizards, 30% with 6, 60% with 8. Both must die to win. 0 = never, 1 = always with 5+.",
-                new AcceptableValueRange<float>(0f, 1f)));
-        TwinBossSpacing = Config.Bind("Bosses", "TwinBossSpacing", 9f,
-            "How far to the side of the normal boss spawn the twin appears.");
+        ExtraBossesEnabled = Config.Bind("Extra Bosses", "Enabled", true,
+            "The final boss can arrive with copies of itself. All bosses must die to win. Host's settings are used.");
+        ExtraBossMinPlayers = Config.Bind("Extra Bosses", "MinPlayers", 5,
+            new ConfigDescription("Extra bosses can only appear with at least this many wizards in the run. 1 = even solo.",
+                new AcceptableValueRange<int>(1, 16)));
+        ExtraBossCount = Config.Bind("Extra Bosses", "MaxExtraBosses", 1,
+            new ConfigDescription("How many extra bosses can appear at most (on top of the normal one). Each has its own chance below.",
+                new AcceptableValueRange<int>(1, MaxExtraBossSlots)));
+        float[] defaultChances = { 50f, 25f, 10f, 5f, 5f };
+        ExtraBossChances = new ConfigEntry<float>[MaxExtraBossSlots];
+        for (int i = 0; i < MaxExtraBossSlots; i++)
+        {
+            ExtraBossChances[i] = Config.Bind("Extra Bosses", $"Boss{i + 2}ChancePercent", defaultChances[i],
+                new ConfigDescription($"Chance (0-100%) that extra boss #{i + 1} (boss {i + 2} in total) appears. Only used if MaxExtraBosses is {i + 1} or more. Each is rolled separately.",
+                    new AcceptableValueRange<float>(0f, 100f)));
+        }
+        ExtraBossSpacing = Config.Bind("Extra Bosses", "Spacing", 9f,
+            "How far apart the bosses spawn (extra bosses alternate left and right of the normal one).");
 
         ShopTimeLimitSeconds = Config.Bind("Shop", "TimeLimitSeconds", 30f,
             new ConfigDescription("Seconds everyone gets to pick in a level-up shop before the game picks for them (vanilla 30). The game warns at 10s left. Note: the game can kick players who repeatedly run out of time, so don't set this too low.",
@@ -155,7 +173,7 @@ public class Plugin : BasePlugin
 
         var harmony = new Harmony(Guid);
         foreach (var type in new[] { typeof(LobbyPatches), typeof(DifficultyPatches), typeof(ScalingPatches), typeof(EnemyExtras),
-                                     typeof(TwinBoss), typeof(ModHandshake), typeof(HostSync), typeof(InviteCounter) })
+                                     typeof(ExtraBosses), typeof(ModHandshake), typeof(HostSync), typeof(InviteCounter) })
         {
             try { harmony.PatchAll(type); }
             catch (Exception ex) { Log.LogError($"Failed to apply {type.Name}: {ex}"); }
