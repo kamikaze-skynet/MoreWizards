@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.1
+- Fix: Extra Bosses and host settings sync never turned on. They hooked a RunManager method the game doesn't have, so both failed to load ("Failed to apply ExtraBosses/HostSync" in the log). They now hook RunManager.OnDestroy.
+
 ## 1.5.0
 - Twin bosses became **extra bosses** with host controls in a new `[Extra Bosses]` section:
   - `MinPlayers`: fewest wizards needed (1 allows solo).

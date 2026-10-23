@@ -156,7 +156,7 @@ internal static class HostSync
     }
 
     // Back to local settings when the run ends.
-    [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnNetworkDespawn))]
+    [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnDestroy))] // RunManager has no OnNetworkDespawn of its own
     [HarmonyPostfix]
     private static void RunManager_Despawn() => S.Clear();
 }

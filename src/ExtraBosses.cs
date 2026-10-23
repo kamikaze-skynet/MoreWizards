@@ -215,7 +215,7 @@ internal static class ExtraBosses
         }
     }
 
-    [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnNetworkDespawn))]
+    [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnDestroy))] // RunManager has no OnNetworkDespawn of its own
     [HarmonyPostfix]
     private static void Run_Despawn() => Reset();
 }
