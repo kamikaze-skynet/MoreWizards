@@ -105,3 +105,7 @@ The base game already scales these with no cap, so they work for 5+ wizards with
 | Always 2 bosses, even solo | `MinPlayers = 1`, `MaxExtraBosses = 1`, `Boss2ChancePercent = 100` |
 | Big party chaos | `MinPlayers = 6`, `MaxExtraBosses = 3`, chances `100, 50, 25` |
 | Rare surprise | `MinPlayers = 1`, `MaxExtraBosses = 1`, `Boss2ChancePercent = 10` |
+
+## Multiplayer settings
+
+In multiplayer everyone plays with the **host's** settings: the host's config is sent to every player from the lobby on, and the mod reads it instead of yours while you're connected. Your own seat layout, invite counter and boss health bar display stay yours. Your config file is never changed. If the host doesn't have this mod, it stays off for you in that game.

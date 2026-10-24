@@ -12,7 +12,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.MoreWizards";
     public const string Name = "MoreWizards";
-    public const string Version = "1.5.3";
+    public const string Version = "1.5.4";
 
     internal static new ManualLogSource Log;
 
@@ -74,9 +74,15 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<float> InviteCounterOffsetY;
     internal static ConfigEntry<float> InviteCounterFontSize;
 
+    private static void OnShopTimeChanged(object sender, System.EventArgs e)
+    {
+        try { NativePatcher.ApplyShopTimer(S.ShopTimeLimitSeconds); } catch { }
+    }
+
     public override void Load()
     {
         Log = base.Log;
+        HostConfig.Init(this, Guid, new[] { "Lobby.SeatLayout", "Lobby.ExtraSeatOutwardOffset", "UI.*", "Extra Bosses.OverheadHealthBars", "Extra Bosses.OverheadBarsForSingleBoss", "Extra Bosses.OverheadBarHeight", "Multiplayer.SyncHostSettings" }, new System.Collections.Generic.Dictionary<string, string> { ["Difficulty.Enabled"] = "false", ["Difficulty.FlatDamageMultiplier"] = "1", ["Difficulty.FlatHealthMultiplier"] = "1", ["Difficulty.FlatSpawnMultiplier"] = "1" }, () => SyncHostSettings.Value);
 
         MaxPlayers = Config.Bind("Lobby", "MaxPlayers", 8,
             new ConfigDescription("Maximum wizards in one lobby (vanilla is 4). Every player in the lobby needs this mod installed.",
@@ -179,6 +185,8 @@ public class Plugin : BasePlugin
         NativePatcher.ApplyAll(MaxPlayers.Value);
         NativePatcher.ApplyObjectiveFixes(FixCaptureSpeed.Value, ZonesGrowPastFour.Value);
         NativePatcher.ApplyShopTimer(ShopTimeLimitSeconds.Value);
+        // The host's shop time limit comes in while connected (HostConfig) and goes back when leaving: re-patch then.
+        ShopTimeLimitSeconds.SettingChanged += OnShopTimeChanged;
 
         var harmony = new Harmony(Guid);
         foreach (var type in new[] { typeof(LobbyPatches), typeof(DifficultyPatches), typeof(ScalingPatches), typeof(EnemyExtras),

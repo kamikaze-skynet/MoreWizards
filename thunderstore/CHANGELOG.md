@@ -1,3 +1,6 @@
+## 1.5.4
+- **Everyone uses the host's settings.** While you're in someone's game, this mod reads the host's config instead of yours (needs `SyncHostSettings` on, the default), from the lobby on. Your own seat layout, invite counter and boss health bar display stay yours. Your config file isn't changed, and your own values are back when you leave. If the host doesn't have the mod, it stays off for you in that game.
+
 # Changelog
 
 ## 1.5.3
