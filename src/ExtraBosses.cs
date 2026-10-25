@@ -106,7 +106,9 @@ internal static class ExtraBosses
             {
                 float side = (k % 2 == 1 ? 1f : -1f) * spacing * ((k + 1) / 2);
                 Vector3 pos = center + rot * Vector3.right * side;
-                NetworkObject spawned = nm.SpawnManager.InstantiateAndSpawn(prefab, 0UL, false, false, false, pos, rot);
+                // destroyWithScene: true, like the game's own boss. With false, Netcode keeps the object when the
+                // scene changes, so a living extra boss followed the players into the lobby and the next run.
+                NetworkObject spawned = nm.SpawnManager.InstantiateAndSpawn(prefab, 0UL, true, false, false, pos, rot);
                 if (spawned == null) { Plugin.Log.LogWarning($"Extra bosses: spawn #{k} failed."); continue; }
 
                 extras.Add(new Extra { Obj = spawned, Health = spawned.GetComponentInChildren<HealthContainer>() });
@@ -285,5 +287,17 @@ internal static class ExtraBosses
 
     [HarmonyPatch(typeof(RunManager), nameof(RunManager.OnDestroy))] // RunManager has no OnNetworkDespawn of its own
     [HarmonyPostfix]
-    private static void Run_Despawn() => Reset();
+    private static void Run_Despawn()
+    {
+        // Host: an extra boss still alive when the run ends goes with it.
+        try
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm != null && nm.IsServer)
+                foreach (var e in extras)
+                    try { if (!e.Gone) e.Obj.Despawn(true); } catch { }
+        }
+        catch { }
+        Reset();
+    }
 }

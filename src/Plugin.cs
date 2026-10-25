@@ -12,7 +12,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.MoreWizards";
     public const string Name = "MoreWizards";
-    public const string Version = "1.5.4";
+    public const string Version = "1.5.5";
 
     internal static new ManualLogSource Log;
 
