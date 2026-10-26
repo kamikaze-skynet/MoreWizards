@@ -42,7 +42,7 @@ Lets The Spell Brigade run lobbies of **more than 4 wizards**: 8 by default, and
 
 ## Config
 
-Edit `BepInEx\config\girthy_mods.MoreWizards.cfg`, or use the config editor in your mod manager. "Extra wizard" means each wizard above `ScalingStartsAbove`.
+Use the config editor in your mod manager (or edit the MoreWizards `.cfg` file in `BepInEx\config`). "Extra wizard" means each wizard above `ScalingStartsAbove`.
 
 | Section | Setting | Default | What it does |
 |---|---|---|---|
