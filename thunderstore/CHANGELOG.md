@@ -1,3 +1,8 @@
+## 1.5.6
+- **Extra bosses are random bosses.** They were always copies of the main boss (so with Krog'wa as the boss, every extra was Krog'wa too). Each extra is now a different boss from the main one and from each other while there are enough kinds, then repeats. New setting `[Extra Bosses] RandomBosses` (on; off = copies as before).
+- The big boss bar at the top switches to the next boss's own name and look when one falls, and the overhead bars are labelled with each boss's name.
+- The overhead bars no longer search the scene twice a second for the whole run; they only look during the boss fight.
+
 ## 1.5.5
 - **Fixed extra bosses following you into the next run.** If you lost while an extra boss was still alive, it survived the trip back to the lobby and was waiting in your next run. Extra bosses now go away with the run, like the game's own boss.
 

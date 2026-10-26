@@ -12,7 +12,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "girthy_mods.MoreWizards";
     public const string Name = "MoreWizards";
-    public const string Version = "1.5.5";
+    public const string Version = "1.5.6";
 
     internal static new ManualLogSource Log;
 
@@ -54,6 +54,7 @@ public class Plugin : BasePlugin
     internal static ConfigEntry<int> ExtraBossCount;
     internal static ConfigEntry<float>[] ExtraBossChances;
     internal static ConfigEntry<float> ExtraBossSpacing;
+    internal static ConfigEntry<bool> ExtraBossRandom;
     internal static ConfigEntry<bool> OverheadHealthBars;
     internal static ConfigEntry<bool> OverheadBarsForSingleBoss;
     internal static ConfigEntry<float> OverheadBarExtraHeight;
@@ -134,7 +135,7 @@ public class Plugin : BasePlugin
             new ConfigDescription("Seconds between add groups during a boss fight.", new AcceptableValueRange<float>(5f, 120f)));
 
         ExtraBossesEnabled = Config.Bind("Extra Bosses", "Enabled", true,
-            "The final boss can arrive with copies of itself. All bosses must die to win. Host's settings are used.");
+            "The final boss can arrive with extra bosses. All bosses must die to win. Host's settings are used.");
         ExtraBossMinPlayers = Config.Bind("Extra Bosses", "MinPlayers", 5,
             new ConfigDescription("Extra bosses can only appear with at least this many wizards in the run. 1 = even solo.",
                 new AcceptableValueRange<int>(1, 16)));
@@ -149,6 +150,8 @@ public class Plugin : BasePlugin
                 new ConfigDescription($"Chance (0-100%) that extra boss #{i + 1} (boss {i + 2} in total) appears. Only used if MaxExtraBosses is {i + 1} or more. Each is rolled separately.",
                     new AcceptableValueRange<float>(0f, 100f)));
         }
+        ExtraBossRandom = Config.Bind("Extra Bosses", "RandomBosses", true,
+            "Each extra boss is a random boss: a different one from the main boss and the other extras while there are enough kinds, then repeats. Off = copies of the main boss.");
         ExtraBossSpacing = Config.Bind("Extra Bosses", "Spacing", 9f,
             "How far apart the bosses spawn (extra bosses alternate left and right of the normal one).");
         OverheadHealthBars = Config.Bind("Extra Bosses", "OverheadHealthBars", true,

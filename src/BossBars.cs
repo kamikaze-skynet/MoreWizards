@@ -12,8 +12,8 @@ namespace MoreWizards;
 /// A health bar over each boss's head when there's more than one boss (extra bosses), so you can see which is which.
 /// The game's big boss bar at the top stays as it is.
 ///
-/// Runs on every player's game with the mod: the boss objective knows the boss (bossHealthContainer, synced to
-/// everyone), and its copies are the living enemies spawned from the same prefab.
+/// Runs on every player's game with the mod: the bosses are the living enemies spawned from any boss prefab (extra
+/// bosses can be other kinds), each labelled with its own name. Only looks while a boss objective exists.
 /// </summary>
 public class BossBars : MonoBehaviour
 {
@@ -25,6 +25,7 @@ public class BossBars : MonoBehaviour
         public NetworkObject Obj;
         public RectTransform Root, Fill;
         public TextMeshProUGUI Label;
+        public string Name = "";
         public float Top;
     }
 
@@ -32,8 +33,7 @@ public class BossBars : MonoBehaviour
 
     private readonly Dictionary<IntPtr, Bar> bars = new();
     private GameObject canvasGo;
-    private EndBossObjective objective;
-    private string bossName = "";
+    private HashSet<string> bossNames;
     private bool multi;                 // this fight has (had) more than one boss
     private float nextScan, nextErrorLog;
 
@@ -77,19 +77,16 @@ public class BossBars : MonoBehaviour
 
     private void Scan()
     {
-        if (!Alive(objective))
-        {
-            objective = UObject.FindObjectOfType<EndBossObjective>();
-            if (!Alive(objective)) { ClearAll(); bossName = ""; multi = false; return; }
-        }
+        // No scene searches outside the boss fight (the boss objective tells us when it appears).
+        var objective = ExtraBosses.CurrentObjective;
+        if (!Alive(objective) || !objective.IsSpawned) { ClearAll(); multi = false; return; }
+        if (!Alive(objective.bossHealthContainer)) return; // boss not spawned yet
 
-        var main = objective.bossHealthContainer;
-        if (Alive(main)) { string n = NameOf(main); if (!string.IsNullOrEmpty(n)) bossName = n; }
-        if (string.IsNullOrEmpty(bossName)) return; // boss not spawned yet
-
+        bossNames ??= ExtraBosses.BossPrefabNames();
+        if (bossNames.Count == 0) { bossNames = null; return; }
         var living = new List<EnemyHealthContainer>();
         foreach (var c in UObject.FindObjectsOfType<EnemyHealthContainer>())
-            if (AliveBoss(c) && NameOf(c) == bossName) living.Add(c);
+            if (AliveBoss(c) && bossNames.Contains(NameOf(c))) living.Add(c);
 
         if (living.Count >= 2) multi = true;
         if (living.Count == 0) multi = false;
@@ -163,7 +160,9 @@ public class BossBars : MonoBehaviour
             label.outlineColor = new Color32(0, 0, 0, 220);
         }
 
-        bars[c.Pointer] = new Bar { Health = c, Obj = obj, Root = root, Fill = fill, Label = label, Top = HeadHeight(obj) };
+        var cfg = ExtraBosses.ConfigFor(obj);
+        string name = cfg != null ? ExtraBosses.DisplayName(cfg.BossType) : NameOf(c);
+        bars[c.Pointer] = new Bar { Health = c, Obj = obj, Root = root, Fill = fill, Label = label, Name = name, Top = HeadHeight(obj) };
     }
 
     // Height of the boss's head above its position, from its renderers (meshes).
@@ -207,7 +206,7 @@ public class BossBars : MonoBehaviour
             {
                 b.Label.fontSize = 15f * scale;
                 b.Label.rectTransform.sizeDelta = new Vector2(Width * 2f * scale, 24f * scale);
-                string text = $"{bossName}  {Mathf.CeilToInt(pct * 100f)}%";
+                string text = $"{b.Name}  {Mathf.CeilToInt(pct * 100f)}%";
                 if (b.Label.text != text) b.Label.text = text;
             }
         }

@@ -10,7 +10,8 @@ namespace MoreWizards;
 /// <summary>
 /// Extra bosses: when the final boss spawns, the host rolls each extra boss slot separately
 /// ([Extra Bosses] Boss2ChancePercent, Boss3ChancePercent, ... up to MaxExtraBosses), if the run has at least MinPlayers.
-/// Each extra is a copy of the boss, placed alternately right and left of the normal spawn.
+/// Each extra is a random boss (different from the main one and each other while there are enough kinds; RandomBosses
+/// off = copies of the main boss), placed alternately right and left of the normal spawn.
 ///
 /// How the game ends a run: EndBossObjective.SpawnBoss hooks two handlers on the boss it spawns:
 ///   - health depleted   -> GameplayEndManager.FlagRunAsSuccessful   (closure ...DisplayClass27_0 "Boolean_DamageInfo")
@@ -25,6 +26,7 @@ internal static class ExtraBosses
     {
         public NetworkObject Obj;
         public HealthContainer Health;
+        public BossType Type;
         public bool Dead => Obj == null || Obj.WasCollected || !Obj.IsSpawned ||
                             Health == null || Health.WasCollected || Health.IsHealthZero();
         public bool Gone => Obj == null || Obj.WasCollected || !Obj.IsSpawned;
@@ -38,6 +40,62 @@ internal static class ExtraBosses
     private static float allDeadSince = -1f, nextTick;
 
     private static bool Active => extras.Count > 0;
+
+    /// <summary>The boss objective of this run (every game), for the overhead bars.</summary>
+    internal static EndBossObjective CurrentObjective;
+
+    // ---------- which bosses there are ----------
+
+    /// <summary>Every boss the game has, one config per kind.</summary>
+    internal static List<BossConfig> AllBosses()
+    {
+        var list = new List<BossConfig>();
+        try
+        {
+            var all = BossConfigRepository.Get();
+            if (all == null) return list;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var b = all[i];
+                if (b != null && b.BossPrefab != null && !list.Exists(x => x.BossType == b.BossType)) list.Add(b);
+            }
+        }
+        catch { }
+        return list;
+    }
+
+    /// <summary>The boss config whose prefab this spawned object came from (by name), or null if it isn't a boss.</summary>
+    internal static BossConfig ConfigFor(NetworkObject obj)
+    {
+        if (obj == null) return null;
+        string name;
+        try { name = obj.gameObject.name.Replace("(Clone)", "").Trim(); } catch { return null; }
+        foreach (var b in AllBosses())
+            try { if (b.BossPrefab.gameObject.name == name) return b; } catch { }
+        return null;
+    }
+
+    internal static string DisplayName(BossType t) => t switch
+    {
+        BossType.Squid => "Sol'phish",
+        BossType.Toad => "Krog'wa",
+        BossType.Hydra => "Mul'gath",
+        _ => t.ToString(),
+    };
+
+    /// <summary>The kinds for the extra bosses: others than the main boss first (shuffled), then repeats.</summary>
+    private static List<BossConfig> PickExtras(BossConfig main, int count)
+    {
+        var picks = new List<BossConfig>();
+        if (!Plugin.ExtraBossRandom.Value) { for (int i = 0; i < count; i++) picks.Add(main); return picks; }
+        var all = AllBosses();
+        if (all.Count == 0) { for (int i = 0; i < count; i++) picks.Add(main); return picks; }
+        var fresh = all.FindAll(b => b.BossType != main.BossType);
+        for (int i = fresh.Count - 1; i > 0; i--) { int j = URandom.Range(0, i + 1); (fresh[i], fresh[j]) = (fresh[j], fresh[i]); }
+        foreach (var b in fresh) { if (picks.Count >= count) break; picks.Add(b); }
+        while (picks.Count < count) picks.Add(all[URandom.Range(0, all.Count)]);
+        return picks;
+    }
 
     private static bool AllExtrasDead
     {
@@ -61,7 +119,7 @@ internal static class ExtraBosses
 
     [HarmonyPatch(typeof(EndBossObjective), nameof(EndBossObjective.OnNetworkSpawn))]
     [HarmonyPostfix]
-    private static void Objective_Spawn() => Reset();
+    private static void Objective_Spawn(EndBossObjective __instance) { Reset(); CurrentObjective = __instance; }
 
     [HarmonyPatch(typeof(EndBossObjective), nameof(EndBossObjective.SpawnBoss))]
     [HarmonyPostfix]
@@ -99,6 +157,7 @@ internal static class ExtraBosses
             if (toSpawn == 0) return;
 
             // Same spawn as the game (objective position, facing 180 deg), alternating right/left.
+            var kinds = PickExtras(config, toSpawn);
             Quaternion rot = Quaternion.Euler(0f, 180f, 0f);
             Vector3 center = __instance.transform.position;
             float spacing = Plugin.ExtraBossSpacing.Value;
@@ -108,10 +167,12 @@ internal static class ExtraBosses
                 Vector3 pos = center + rot * Vector3.right * side;
                 // destroyWithScene: true, like the game's own boss. With false, Netcode keeps the object when the
                 // scene changes, so a living extra boss followed the players into the lobby and the next run.
-                NetworkObject spawned = nm.SpawnManager.InstantiateAndSpawn(prefab, 0UL, true, false, false, pos, rot);
-                if (spawned == null) { Plugin.Log.LogWarning($"Extra bosses: spawn #{k} failed."); continue; }
+                var kind = kinds[k - 1] ?? config;
+                var kindPrefab = kind.BossPrefab ?? prefab;
+                NetworkObject spawned = nm.SpawnManager.InstantiateAndSpawn(kindPrefab, 0UL, true, false, false, pos, rot);
+                if (spawned == null) { Plugin.Log.LogWarning($"Extra bosses: spawn #{k} ({kind.BossType}) failed."); continue; }
 
-                extras.Add(new Extra { Obj = spawned, Health = spawned.GetComponentInChildren<HealthContainer>() });
+                extras.Add(new Extra { Obj = spawned, Health = spawned.GetComponentInChildren<HealthContainer>(), Type = kind.BossType });
                 // Let the game's "enemy spawned" listeners (pointers, trackers) know about it.
                 __instance.InvokeEnemySpawnedRpc(new NetworkObjectReference(spawned));
             }
@@ -119,7 +180,7 @@ internal static class ExtraBosses
             if (extras.Count > 0)
             {
                 objective = __instance;
-                Plugin.Log.LogInfo($"Extra bosses: {config.BossType} x{extras.Count + 1} this fight.");
+                Plugin.Log.LogInfo($"Extra bosses: {config.BossType} with {string.Join(", ", extras.ConvertAll(e => e.Type.ToString()))} this fight.");
             }
         }
         catch (Exception ex) { Plugin.Log.LogError($"Extra bosses (spawn): {ex}"); }
@@ -160,7 +221,7 @@ internal static class ExtraBosses
                 if (e.Dead) continue;
                 if (barOn == e) return;
                 barOn = e;
-                objective.SetBossHealthContainerRpc(new NetworkObjectReference(e.Obj), objective.bossConfigToSpawn.BossType);
+                objective.SetBossHealthContainerRpc(new NetworkObjectReference(e.Obj), e.Type);
                 return;
             }
         }
@@ -188,6 +249,12 @@ internal static class ExtraBosses
 
             var nextObj = OwnerObject(next);
             if (nextObj == null) return true;
+            // A different kind of boss: its own name and bar on the panel.
+            var cfg = ConfigFor(nextObj);
+            if (cfg != null)
+            {
+                try { panel.bossConfig = cfg; panel.InitializeUIElements(); } catch { }
+            }
             panel.InitializeUIEvents(nextObj);
             panel.InitializeHealthBar(nextObj);
             Plugin.Log.LogInfo($"Extra bosses: health bar moved to the next boss ({LivingBossCount(dead)} left).");
@@ -214,25 +281,31 @@ internal static class ExtraBosses
     private static bool AliveBoss(EnemyHealthContainer c) =>
         c is not null && !c.WasCollected && c != null && c.gameObject.activeInHierarchy && !c.IsHealthZero();
 
-    /// <summary>Another living enemy from the same boss prefab as <paramref name="dead"/>, if any.</summary>
+    /// <summary>Another living boss (any kind) than <paramref name="dead"/>, if any.</summary>
     private static EnemyHealthContainer OtherLivingBoss(EnemyHealthContainer dead)
     {
-        string name = BossName(dead);
-        if (string.IsNullOrEmpty(name)) return null;
         var deadObj = OwnerObject(dead);
+        var names = BossPrefabNames();
         foreach (var c in UnityEngine.Object.FindObjectsOfType<EnemyHealthContainer>())
-            if (AliveBoss(c) && OwnerObject(c) != deadObj && BossName(c) == name) return c;
+            if (AliveBoss(c) && OwnerObject(c) != deadObj && names.Contains(BossName(c))) return c;
         return null;
     }
 
     private static int LivingBossCount(EnemyHealthContainer dead)
     {
-        string name = BossName(dead);
         var deadObj = OwnerObject(dead);
+        var names = BossPrefabNames();
         int n = 0;
         foreach (var c in UnityEngine.Object.FindObjectsOfType<EnemyHealthContainer>())
-            if (AliveBoss(c) && OwnerObject(c) != deadObj && BossName(c) == name) n++;
+            if (AliveBoss(c) && OwnerObject(c) != deadObj && names.Contains(BossName(c))) n++;
         return n;
+    }
+
+    internal static HashSet<string> BossPrefabNames()
+    {
+        var set = new HashSet<string>();
+        foreach (var b in AllBosses()) try { set.Add(b.BossPrefab.gameObject.name); } catch { }
+        return set;
     }
 
     // ---------- Track kills; release victory when the last boss is dead ----------
