@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
@@ -36,7 +37,7 @@ internal static class EnemyExtras
 
     [HarmonyPatch(typeof(EnemySpawner), nameof(EnemySpawner.SpawnEliteEnemy))]
     [HarmonyPostfix]
-    private static void SpawnElite_Postfix(EnemySpawner __instance, EliteEnemyConfiguration eliteEnemyConfig)
+    private static void SpawnElite_Postfix(EnemySpawner __instance, MethodBase __originalMethod, object[] __args)
     {
         if (spawningExtraElites || !IsServer) return;
         int extra = DifficultyPatches.ExtraPlayers();
@@ -46,7 +47,8 @@ internal static class EnemyExtras
         spawningExtraElites = true;
         try
         {
-            for (int i = 0; i < copies; i++) __instance.SpawnEliteEnemy(eliteEnemyConfig);
+            // Reuse the game's arguments so older builds get only the elite config and newer builds also get the chosen prefab.
+            for (int i = 0; i < copies; i++) __originalMethod.Invoke(__instance, __args);
             Plugin.Log.LogInfo($"Elite spawn: +{copies} extra for {extra} extra wizard(s).");
         }
         catch (Exception ex) { Plugin.Log.LogError($"Extra elites: {ex}"); }

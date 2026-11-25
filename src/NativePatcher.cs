@@ -21,6 +21,7 @@ internal static class NativePatcher
         public string Assembly;
         public string Class;
         public string Nested;     // compiler-generated nested type (async state machines), or null
+        public string PreviousNested;
         public string Method;
         public int ArgCount;      // -1 = any
         public byte[] Signature;
@@ -44,8 +45,10 @@ internal static class NativePatcher
         new Site { Description = "Steam lobby size (CreateLobbyAsync(4))",
             Assembly = "Networking.Steam.dll", Class = "SteamLobbyService", Nested = "<InitializeAsHost>d__3",
             Method = "MoveNext", ArgCount = 0, Signature = Hex("B9 04 00 00 00 E8"), ImmOffset = 1, ImmSize = 4, ScanLength = 0x500 },
+        // The update renumbered the EOS host state machine from d__24 to d__27 and kept the same lobby-cap instruction.
         new Site { Description = "EOS lobby size (host)",
-            Assembly = "Networking.EOS.dll", Class = "EOSLobbyService", Nested = "<InitializeAsHost>d__24",
+            Assembly = "Networking.EOS.dll", Class = "EOSLobbyService", Nested = "<InitializeAsHost>d__27",
+            PreviousNested = "<InitializeAsHost>d__24",
             Method = "MoveNext", ArgCount = 0, Signature = Hex("48 C7 44 24 68 04 00 00 00"), ImmOffset = 5, ImmSize = 4, ScanLength = 0xA00 },
         new Site { Description = "EOS lobby size (CreateLobbyOptions)",
             Assembly = "Networking.EOS.dll", Class = "EOSLobbyService", Nested = null,
@@ -199,7 +202,9 @@ internal static class NativePatcher
         if (klass == IntPtr.Zero) throw new Exception($"class {s.Class} not found");
         if (s.Nested != null)
         {
-            klass = IL2CPP.GetIl2CppNestedType(klass, s.Nested);
+            klass = s.PreviousNested == null
+                ? IL2CPP.GetIl2CppNestedType(klass, s.Nested)
+                : FindNestedType(klass, s.Nested, s.PreviousNested);
             if (klass == IntPtr.Zero) throw new Exception($"nested type {s.Nested} not found");
         }
         IntPtr method = IL2CPP.il2cpp_class_get_method_from_name(klass, s.Method, s.ArgCount);
@@ -208,6 +213,20 @@ internal static class NativePatcher
         IntPtr code = Marshal.ReadIntPtr(method);
         if (code == IntPtr.Zero) throw new Exception("method has no native code");
         return code;
+    }
+
+    private static IntPtr FindNestedType(IntPtr klass, string name, string previousName)
+    {
+        // Either name is valid here, so avoid the error that GetIl2CppNestedType logs for an absent name.
+        IntPtr iterator = IntPtr.Zero;
+        IntPtr nested;
+        while ((nested = IL2CPP.il2cpp_class_get_nested_types(klass, ref iterator)) != IntPtr.Zero)
+        {
+            string nestedName = IL2CPP.il2cpp_class_get_name_(nested);
+            if (nestedName == name || nestedName == previousName)
+                return nested;
+        }
+        return IntPtr.Zero;
     }
 
     private static bool Apply(Site s, int maxPlayers)
